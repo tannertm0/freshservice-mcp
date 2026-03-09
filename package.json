@@ -1,0 +1,18 @@
+{
+  "name": "freshservice-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Freshservice ITSM - enables AI assistants to manage tickets, assets, and more",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "freshservice-mcp": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "keywords": ["mcp", "freshservice", "itsm", "ai", "claude"],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1"
+  }
+}
