@@ -1,9 +1,13 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { registerTicketTools } from "../src/tools/tickets.js";
-import { registerAssetTools } from "../src/tools/assets.js";
-import { registerPeopleTools } from "../src/tools/people.js";
+import { getTicketTools, handleTicketTool } from "../src/tools/tickets.js";
+import { getAssetTools, handleAssetTool } from "../src/tools/assets.js";
+import { getPeopleTools, handlePeopleTool } from "../src/tools/people.js";
 import assert from "node:assert";
 import { describe, it, beforeEach } from "node:test";
 
@@ -256,12 +260,37 @@ function createMockClient() {
 }
 
 async function setupTestServer() {
-  const mcpServer = new McpServer({ name: "test-freshservice", version: "1.0.0" });
   const mockClient = createMockClient();
 
-  registerTicketTools(mcpServer, mockClient);
-  registerAssetTools(mcpServer, mockClient);
-  registerPeopleTools(mcpServer, mockClient);
+  const mcpServer = new Server(
+    { name: "test-freshservice", version: "1.0.0" },
+    { capabilities: { tools: {} } }
+  );
+
+  const allTools = [
+    ...getTicketTools(),
+    ...getAssetTools(),
+    ...getPeopleTools(),
+  ];
+
+  mcpServer.setRequestHandler(ListToolsRequestSchema, async () => ({
+    tools: allTools,
+  }));
+
+  mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const { name, arguments: args } = request.params;
+
+    const result =
+      (await handleTicketTool(name, args, mockClient)) ||
+      (await handleAssetTool(name, args, mockClient)) ||
+      (await handlePeopleTool(name, args, mockClient));
+
+    if (!result) {
+      throw new Error(`Unknown tool: ${name}`);
+    }
+
+    return result;
+  });
 
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 

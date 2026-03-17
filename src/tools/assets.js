@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 function formatAsset(a) {
   return [
     `#${a.display_id} — ${a.name}`,
@@ -9,111 +7,132 @@ function formatAsset(a) {
   ].join("\n");
 }
 
-export function registerAssetTools(server, client) {
-  server.tool(
-    "list_assets",
-    "List Freshservice assets/configuration items",
+export function getAssetTools() {
+  return [
     {
-      page: z.number().optional().describe("Page number"),
-      per_page: z.number().max(100).optional().describe("Results per page"),
+      name: "list_assets",
+      description: "List Freshservice assets/configuration items",
+      inputSchema: {
+        type: "object",
+        properties: {
+          page: { type: "number", description: "Page number" },
+          per_page: { type: "number", maximum: 100, description: "Results per page" },
+        },
+      },
     },
-    async (args) => {
-      const result = await client.listAssets(args);
-      const assets = result.assets || [];
-      if (assets.length === 0) {
-        return { content: [{ type: "text", text: "No assets found." }] };
-      }
-      const text = assets.map(formatAsset).join("\n\n");
-      return {
-        content: [
-          { type: "text", text: `Found ${assets.length} asset(s):\n\n${text}` },
-        ],
-      };
-    }
-  );
+    {
+      name: "get_asset",
+      description: "Get details of a specific asset",
+      inputSchema: {
+        type: "object",
+        properties: {
+          display_id: { type: "number", description: "The asset display ID" },
+        },
+        required: ["display_id"],
+      },
+    },
+    {
+      name: "create_asset",
+      description: "Create a new Freshservice asset",
+      inputSchema: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Asset name" },
+          asset_type_id: { type: "number", description: "Asset type ID" },
+          description: { type: "string", description: "Asset description" },
+          user_id: { type: "number", description: "Assign to user ID" },
+          department_id: { type: "number", description: "Department ID" },
+          location_id: { type: "number", description: "Location ID" },
+          asset_tag: { type: "string", description: "Asset tag" },
+        },
+        required: ["name", "asset_type_id"],
+      },
+    },
+    {
+      name: "update_asset",
+      description: "Update an existing Freshservice asset",
+      inputSchema: {
+        type: "object",
+        properties: {
+          display_id: { type: "number", description: "The asset display ID to update" },
+          name: { type: "string" },
+          description: { type: "string" },
+          user_id: { type: "number" },
+          department_id: { type: "number" },
+          location_id: { type: "number" },
+          asset_tag: { type: "string" },
+        },
+        required: ["display_id"],
+      },
+    },
+    {
+      name: "delete_asset",
+      description: "Delete a Freshservice asset",
+      inputSchema: {
+        type: "object",
+        properties: {
+          display_id: { type: "number", description: "The asset display ID to delete" },
+        },
+        required: ["display_id"],
+      },
+    },
+  ];
+}
 
-  server.tool(
-    "get_asset",
-    "Get details of a specific asset",
-    {
-      display_id: z.number().describe("The asset display ID"),
-    },
-    async ({ display_id }) => {
-      const result = await client.getAsset(display_id);
-      const a = result.asset;
-      const text = [
-        formatAsset(a),
-        `  Description: ${a.description || "N/A"}`,
-        `  Impact: ${a.impact || "N/A"}`,
-        a.type_fields
-          ? `  Fields: ${JSON.stringify(a.type_fields, null, 2)}`
-          : "",
-      ]
-        .filter(Boolean)
-        .join("\n");
-      return { content: [{ type: "text", text }] };
-    }
-  );
+export function handleAssetTool(name, args, client) {
+  switch (name) {
+    case "list_assets":
+      return handleListAssets(args, client);
+    case "get_asset":
+      return handleGetAsset(args, client);
+    case "create_asset":
+      return handleCreateAsset(args, client);
+    case "update_asset":
+      return handleUpdateAsset(args, client);
+    case "delete_asset":
+      return handleDeleteAsset(args, client);
+    default:
+      return null;
+  }
+}
 
-  server.tool(
-    "create_asset",
-    "Create a new Freshservice asset",
-    {
-      name: z.string().describe("Asset name"),
-      asset_type_id: z.number().describe("Asset type ID"),
-      description: z.string().optional().describe("Asset description"),
-      user_id: z.number().optional().describe("Assign to user ID"),
-      department_id: z.number().optional().describe("Department ID"),
-      location_id: z.number().optional().describe("Location ID"),
-      asset_tag: z.string().optional().describe("Asset tag"),
-    },
-    async (args) => {
-      const result = await client.createAsset(args);
-      const a = result.asset;
-      return {
-        content: [
-          { type: "text", text: `Asset created successfully!\n\n${formatAsset(a)}` },
-        ],
-      };
-    }
-  );
+async function handleListAssets(args, client) {
+  const result = await client.listAssets(args);
+  const assets = result.assets || [];
+  if (assets.length === 0) {
+    return { content: [{ type: "text", text: "No assets found." }] };
+  }
+  const text = assets.map(formatAsset).join("\n\n");
+  return { content: [{ type: "text", text: `Found ${assets.length} asset(s):\n\n${text}` }] };
+}
 
-  server.tool(
-    "update_asset",
-    "Update an existing Freshservice asset",
-    {
-      display_id: z.number().describe("The asset display ID to update"),
-      name: z.string().optional(),
-      description: z.string().optional(),
-      user_id: z.number().optional(),
-      department_id: z.number().optional(),
-      location_id: z.number().optional(),
-      asset_tag: z.string().optional(),
-    },
-    async ({ display_id, ...updates }) => {
-      const result = await client.updateAsset(display_id, updates);
-      const a = result.asset;
-      return {
-        content: [
-          { type: "text", text: `Asset updated successfully!\n\n${formatAsset(a)}` },
-        ],
-      };
-    }
-  );
+async function handleGetAsset({ display_id }, client) {
+  const result = await client.getAsset(display_id);
+  const a = result.asset;
+  const text = [
+    formatAsset(a),
+    `  Description: ${a.description || "N/A"}`,
+    `  Impact: ${a.impact || "N/A"}`,
+    a.type_fields ? `  Fields: ${JSON.stringify(a.type_fields, null, 2)}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  return { content: [{ type: "text", text }] };
+}
 
-  server.tool(
-    "delete_asset",
-    "Delete a Freshservice asset",
-    {
-      display_id: z.number().describe("The asset display ID to delete"),
-    },
-    async ({ display_id }) => {
-      await client.deleteAsset(display_id);
-      return {
-        content: [
-          { type: "text", text: `Asset #${display_id} deleted successfully.` },
-        ],
-      };
-    }
-  );
+async function handleCreateAsset(args, client) {
+  const result = await client.createAsset(args);
+  const a = result.asset;
+  return { content: [{ type: "text", text: `Asset created successfully!\n\n${formatAsset(a)}` }] };
+}
+
+async function handleUpdateAsset({ display_id, ...updates }, client) {
+  const result = await client.updateAsset(display_id, updates);
+  const a = result.asset;
+  return { content: [{ type: "text", text: `Asset updated successfully!\n\n${formatAsset(a)}` }] };
+}
+
+async function handleDeleteAsset({ display_id }, client) {
+  await client.deleteAsset(display_id);
+  return { content: [{ type: "text", text: `Asset #${display_id} deleted successfully.` }] };
 }

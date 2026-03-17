@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
 import { FreshserviceClient } from "./freshservice-client.js";
-import { registerTicketTools } from "./tools/tickets.js";
-import { registerAssetTools } from "./tools/assets.js";
-import { registerPeopleTools } from "./tools/people.js";
+import { getTicketTools, handleTicketTool } from "./tools/tickets.js";
+import { getAssetTools, handleAssetTool } from "./tools/assets.js";
+import { getPeopleTools, handlePeopleTool } from "./tools/people.js";
 
 const domain = process.env.FRESHSERVICE_DOMAIN;
 const apiKey = process.env.FRESHSERVICE_API_KEY;
@@ -21,14 +25,35 @@ if (!domain || !apiKey) {
 
 const client = new FreshserviceClient(domain, apiKey);
 
-const server = new McpServer({
-  name: "freshservice-mcp",
-  version: "1.0.0",
-});
+const server = new Server(
+  { name: "freshservice-mcp", version: "1.0.0" },
+  { capabilities: { tools: {} } }
+);
 
-registerTicketTools(server, client);
-registerAssetTools(server, client);
-registerPeopleTools(server, client);
+const allTools = [
+  ...getTicketTools(),
+  ...getAssetTools(),
+  ...getPeopleTools(),
+];
+
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  tools: allTools,
+}));
+
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+
+  const result =
+    (await handleTicketTool(name, args, client)) ||
+    (await handleAssetTool(name, args, client)) ||
+    (await handlePeopleTool(name, args, client));
+
+  if (!result) {
+    throw new Error(`Unknown tool: ${name}`);
+  }
+
+  return result;
+});
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
