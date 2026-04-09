@@ -6,6 +6,12 @@ import { FreshserviceClient } from "./freshservice-client.js";
 import { registerTicketTools } from "./tools/tickets.js";
 import { registerAssetTools } from "./tools/assets.js";
 import { registerPeopleTools } from "./tools/people.js";
+import { registerTicketTaskTools } from "./tools/ticket-tasks.js";
+import { registerTimeEntryTools } from "./tools/time-entries.js";
+import { registerChangeTools } from "./tools/changes.js";
+import { registerProblemTools } from "./tools/problems.js";
+import { registerServiceCatalogTools } from "./tools/service-catalog.js";
+import { registerKnowledgeBaseTools } from "./tools/knowledge-base.js";
 
 const domain = process.env.FRESHSERVICE_DOMAIN;
 const apiKey = process.env.FRESHSERVICE_API_KEY;
@@ -29,6 +35,12 @@ const server = new McpServer({
 registerTicketTools(server, client);
 registerAssetTools(server, client);
 registerPeopleTools(server, client);
+registerTicketTaskTools(server, client);
+registerTimeEntryTools(server, client);
+registerChangeTools(server, client);
+registerProblemTools(server, client);
+registerServiceCatalogTools(server, client);
+registerKnowledgeBaseTools(server, client);
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

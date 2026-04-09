@@ -1,7 +1,7 @@
 {
   "name": "freshservice-mcp",
-  "version": "1.0.0",
-  "description": "MCP server for Freshservice ITSM - enables AI assistants to manage tickets, assets, and more",
+  "version": "2.0.0",
+  "description": "MCP server for Freshservice ITSM - enables AI assistants to manage tickets, assets, changes, problems, service catalog, knowledge base, and more",
   "type": "module",
   "main": "src/index.js",
   "bin": {
@@ -11,9 +11,36 @@
     "start": "node src/index.js",
     "test": "node --test test/mock-server.test.js"
   },
-  "keywords": ["mcp", "freshservice", "itsm", "ai", "claude"],
+  "keywords": [
+    "mcp",
+    "freshservice",
+    "itsm",
+    "ai",
+    "claude",
+    "model-context-protocol",
+    "service-desk",
+    "it-service-management",
+    "helpdesk",
+    "change-management",
+    "knowledge-base"
+  ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tannertm0/freshservice-mcp.git"
+  },
+  "homepage": "https://github.com/tannertm0/freshservice-mcp#readme",
+  "author": "tannertm0",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1"
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "zod": "^3.24.0"
   }
 }
